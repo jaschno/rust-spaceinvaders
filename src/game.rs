@@ -1,28 +1,29 @@
 use gamestate::levelgamestate::LevelGameState;
 use macroquad::window::next_frame;
+use std::rc::Rc;
 
 mod gamestate;
 mod soundstore;
 
 pub struct Game {
-    state: Vec<Box<dyn gamestate::GameState>>
+    state: Vec<Box<dyn gamestate::GameState>>,
+    sound_store: Rc<soundstore::SoundStore>
 }
 
 impl Game {
     pub fn new() -> Self {
          Self {
-            state: Vec::new()
+            state: Vec::new(),
+            sound_store: Rc::new(soundstore::SoundStore::new())
         }
     }    
 
     pub async fn run(&mut self) {
         // TODO this needs to be the menu
 
-        self.state.push(Box::new(LevelGameState::new()));
+        self.state.push(Box::new(LevelGameState::new(self.sound_store.clone())));
 
-        while self.state.len() > 0 {
-            let state = self.state.last_mut().unwrap();
-
+        while let Some(state) = self.state.last_mut() {
             loop {
                 let result = state.update();
 
@@ -31,8 +32,8 @@ impl Game {
                         if game_state.pop {
                             self.state.pop();
                         }
-                        if game_state.game_state.is_some() {
-                            self.state.push(game_state.game_state.unwrap());
+                        if let Some(new_state) = game_state.game_state {
+                            self.state.push(new_state);
                         }
                         break;
                     },
